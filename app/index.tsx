@@ -60,7 +60,7 @@ export default function Index() {
             updateStatus(item.id, item.completed);
           }}
         >
-          {item.completed && <Feather name="check\" size={16} color="white" />}
+          {item.completed && <Feather name="x" size={16} color="white" />}
         </TouchableOpacity>
         <Text style={[
           styles.todoText,
