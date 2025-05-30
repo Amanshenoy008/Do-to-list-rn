@@ -1,5 +1,6 @@
 import { data } from '@/data/todos';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from "react";
 import {
   FlatList,
@@ -19,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function Index() {
   const [text, setText] = useState('');
   const [todoData, setTodoData] = useState(data);
+  const router = useRouter();
 
   const deleteOperation = (toBeDeleted: any) => {
     setTodoData(prev => prev.filter(item => item.id !== toBeDeleted));
@@ -48,12 +50,15 @@ export default function Index() {
   const renderTodoItem = ({ item }) => (
     <Pressable
       style={styles.todoItem}
-      onPress={() => updateStatus(item.id, item.completed)}
+      onPress={() => router.push(`/task/${item.id}`)}
     >
       <View style={styles.todoContent}>
         <TouchableOpacity
           style={[styles.checkbox, item.completed && styles.checkboxChecked]}
-          onPress={() => updateStatus(item.id, item.completed)}
+          onPress={(e) => {
+            e.stopPropagation();
+            updateStatus(item.id, item.completed);
+          }}
         >
           {item.completed && <Feather name="check" size={16} color="white" />}
         </TouchableOpacity>
@@ -65,7 +70,10 @@ export default function Index() {
         </Text>
       </View>
       <TouchableOpacity
-        onPress={() => deleteOperation(item.id)}
+        onPress={(e) => {
+          e.stopPropagation();
+          deleteOperation(item.id);
+        }}
         style={styles.deleteButton}
       >
         <Feather name="trash-2" size={20} color="#FF5A5A" />
