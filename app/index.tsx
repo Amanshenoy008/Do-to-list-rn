@@ -1,7 +1,8 @@
 import { data } from '@/data/todos';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   Keyboard,
@@ -17,10 +18,39 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const STORAGE_KEY = '@todos';
+
 export default function Index() {
   const [text, setText] = useState('');
   const [todoData, setTodoData] = useState(data);
   const router = useRouter();
+
+  useEffect(() => {
+    loadTodos();
+  }, []);
+
+  useEffect(() => {
+    saveTodos();
+  }, [todoData]);
+
+  const loadTodos = async () => {
+    try {
+      const storedTodos = await AsyncStorage.getItem(STORAGE_KEY);
+      if (storedTodos !== null) {
+        setTodoData(JSON.parse(storedTodos));
+      }
+    } catch (error) {
+      console.error('Error loading todos:', error);
+    }
+  };
+
+  const saveTodos = async () => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
+    } catch (error) {
+      console.error('Error saving todos:', error);
+    }
+  };
 
   const deleteOperation = (toBeDeleted: any) => {
     setTodoData(prev => prev.filter(item => item.id !== toBeDeleted));
@@ -60,7 +90,7 @@ export default function Index() {
             updateStatus(item.id, item.completed);
           }}
         >
-          {item.completed && <Feather name="x\" size={16} color="white" />}
+          {item.completed && <Feather name="x" size={16} color="white" />}
         </TouchableOpacity>
         <Text style={[
           styles.todoText,

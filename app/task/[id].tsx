@@ -1,4 +1,4 @@
-import { data } from '@/data/todos';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -12,21 +12,44 @@ import {
   View,
 } from 'react-native';
 
+const STORAGE_KEY = '@todos';
+
 export default function TaskDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [task, setTask] = useState({ title: '', completed: false });
+  const [task, setTask] = useState({ id: '', title: '', completed: false });
+  const [todos, setTodos] = useState([]);
 
   useEffect(() => {
-    const foundTask = data.find(t => t.id.toString() === id);
-    if (foundTask) {
-      setTask(foundTask);
-    }
+    loadTask();
   }, [id]);
 
-  const handleSave = () => {
-    // In a real app, you would update the task in your data store here
-    router.back();
+  const loadTask = async () => {
+    try {
+      const storedTodos = await AsyncStorage.getItem(STORAGE_KEY);
+      if (storedTodos) {
+        const parsedTodos = JSON.parse(storedTodos);
+        setTodos(parsedTodos);
+        const foundTask = parsedTodos.find(t => t.id.toString() === id);
+        if (foundTask) {
+          setTask(foundTask);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading task:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const updatedTodos = todos.map(t =>
+        t.id.toString() === id ? task : t
+      );
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTodos));
+      router.back();
+    } catch (error) {
+      console.error('Error saving task:', error);
+    }
   };
 
   return (
@@ -51,7 +74,7 @@ export default function TaskDetail() {
           onPress={() => setTask(prev => ({ ...prev, completed: !prev.completed }))}
         >
           <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
-            {task.completed && <Feather name="x\" size={16} color="white" />}
+            {task.completed && <Feather name="x" size={16} color="white" />}
           </View>
           <Text style={styles.statusText}>
             {task.completed ? 'Completed' : 'Mark as completed'}
