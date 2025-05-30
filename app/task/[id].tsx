@@ -51,7 +51,7 @@ export default function TaskDetail() {
           onPress={() => setTask(prev => ({ ...prev, completed: !prev.completed }))}
         >
           <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
-            {task.completed && <Feather name="check" size={16} color="white" />}
+            {task.completed && <Feather name="check\" size={16} color="white" />}
           </View>
           <Text style={styles.statusText}>
             {task.completed ? 'Completed' : 'Mark as completed'}

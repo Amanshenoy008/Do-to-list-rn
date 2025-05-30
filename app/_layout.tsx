@@ -1,7 +1,9 @@
 import { Stack } from "expo-router";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context"
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 export default function RootLayout() {
+  useFrameworkReady();
   return (
     <SafeAreaProvider>
       <Stack>
