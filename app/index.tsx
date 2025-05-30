@@ -1,6 +1,5 @@
-import { data } from '@/data/todos';
-import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from "react";
 import {
@@ -19,19 +18,27 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const STORAGE_KEY = '@todos';
+const DELETED_STORAGE_KEY = '@deleted_todos';
 
 export default function Index() {
   const [text, setText] = useState('');
   const [todoData, setTodoData] = useState(data);
+  const [deletedTodos, setDeletedTodos] = useState([]);
+  const [sortOrder, setSortOrder] = useState('default'); // 'default', 'completed', 'incomplete'
   const router = useRouter();
 
   useEffect(() => {
     loadTodos();
+    loadDeletedTodos();
   }, []);
 
   useEffect(() => {
     saveTodos();
   }, [todoData]);
+
+  useEffect(() => {
+    saveDeletedTodos();
+  }, [deletedTodos]);
 
   const loadTodos = async () => {
     try {
@@ -44,6 +51,17 @@ export default function Index() {
     }
   };
 
+  const loadDeletedTodos = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(DELETED_STORAGE_KEY);
+      if (stored !== null) {
+        setDeletedTodos(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading deleted todos:', error);
+    }
+  };
+
   const saveTodos = async () => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(todoData));
@@ -52,8 +70,28 @@ export default function Index() {
     }
   };
 
+  const saveDeletedTodos = async () => {
+    try {
+      await AsyncStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify(deletedTodos));
+    } catch (error) {
+      console.error('Error saving deleted todos:', error);
+    }
+  };
+
   const deleteOperation = (toBeDeleted: any) => {
-    setTodoData(prev => prev.filter(item => item.id !== toBeDeleted));
+    const deletedTodo = todoData.find(item => item.id === toBeDeleted);
+    if (deletedTodo) {
+      setDeletedTodos(prev => [deletedTodo, ...prev]);
+      setTodoData(prev => prev.filter(item => item.id !== toBeDeleted));
+    }
+  };
+
+  const restoreLatestTodo = () => {
+    if (deletedTodos.length > 0) {
+      const [latestDeleted, ...remainingDeleted] = deletedTodos;
+      setTodoData(prev => [latestDeleted, ...prev]);
+      setDeletedTodos(remainingDeleted);
+    }
   };
 
   const createOperation = (text: string) => {
@@ -77,6 +115,17 @@ export default function Index() {
     );
   };
 
+  const getSortedTodos = () => {
+    switch (sortOrder) {
+      case 'completed':
+        return [...todoData].sort((a, b) => Number(b.completed) - Number(a.completed));
+      case 'incomplete':
+        return [...todoData].sort((a, b) => Number(a.completed) - Number(b.completed));
+      default:
+        return todoData;
+    }
+  };
+
   const renderTodoItem = ({ item }) => (
     <Pressable
       style={styles.todoItem}
@@ -90,7 +139,7 @@ export default function Index() {
             updateStatus(item.id, item.completed);
           }}
         >
-          {item.completed && <Feather name="x\" size={16} color="white" />}
+          {item.completed && <Feather name="x" size={16} color="white" />}
         </TouchableOpacity>
         <Text style={[
           styles.todoText,
@@ -129,6 +178,38 @@ export default function Index() {
           </Text>
         </View>
 
+        <View style={styles.controlsContainer}>
+          <View style={styles.sortButtons}>
+            <TouchableOpacity
+              style={[styles.sortButton, sortOrder === 'default' && styles.sortButtonActive]}
+              onPress={() => setSortOrder('default')}
+            >
+              <Text style={[styles.sortButtonText, sortOrder === 'default' && styles.sortButtonTextActive]}>All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.sortButton, sortOrder === 'incomplete' && styles.sortButtonActive]}
+              onPress={() => setSortOrder('incomplete')}
+            >
+              <Text style={[styles.sortButtonText, sortOrder === 'incomplete' && styles.sortButtonTextActive]}>Active</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.sortButton, sortOrder === 'completed' && styles.sortButtonActive]}
+              onPress={() => setSortOrder('completed')}
+            >
+              <Text style={[styles.sortButtonText, sortOrder === 'completed' && styles.sortButtonTextActive]}>Completed</Text>
+            </TouchableOpacity>
+          </View>
+          {deletedTodos.length > 0 && (
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={restoreLatestTodo}
+            >
+              <Feather name="rotate-ccw" size={16} color="#4C1D95" />
+              <Text style={styles.restoreButtonText}>Restore</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -149,7 +230,7 @@ export default function Index() {
         </View>
 
         <FlatList
-          data={todoData}
+          data={getSortedTodos()}
           renderItem={renderTodoItem}
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.listContainer}
@@ -182,6 +263,47 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#718096',
+  },
+  controlsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sortButtons: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 2,
+  },
+  sortButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  sortButtonActive: {
+    backgroundColor: '#4C1D95',
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: '#4A5568',
+  },
+  sortButtonTextActive: {
+    color: 'white',
+  },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDE9FE',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  restoreButtonText: {
+    color: '#4C1D95',
+    fontSize: 14,
+    fontWeight: '500',
   },
   inputContainer: {
     flexDirection: 'row',
