@@ -1,165 +1,237 @@
 import { data } from '@/data/todos';
-import MaterialIcons from '@react-native-vector-icons/material-icons';
+import { Feather } from '@expo/vector-icons';
 import { useState } from "react";
 import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
+  const [text, setText] = useState('');
+  const [todoData, setTodoData] = useState(data);
 
-  
-  const [text,Settext] = useState('')
-  const [tododata,Settododata] = useState(data)
+  const deleteOperation = (toBeDeleted: any) => {
+    setTodoData(prev => prev.filter(item => item.id !== toBeDeleted));
+  };
 
-  const deleteOperation=(tobedeleted: any)=>{
-      Settododata(prev =>prev.filter(item => item.id !== tobedeleted))
-  }
+  const createOperation = (text: string) => {
+    if (text.trim() === '') {
+      return;
+    }
+    const newTodo = {
+      id: Math.random(),
+      title: text,
+      completed: false
+    };
+    setTodoData(prev => [newTodo, ...prev]);
+    setText('');
+  };
 
-  const createOperation = (text:string)=>{
-      if (text === '' || text === 'Add todo here...'){
-        return alert('Invalid Todo title')
-      }
-      const newtodo = {
-        id: Math.random(),
-        title: text,
-        description:'incomplete'
-      }
-      Settododata(prev => [newtodo, ...prev]);
-      Settext('Add todo here...')
+  const updateStatus = (id: number, completed: boolean) => {
+    setTodoData(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, completed: !completed } : item
+      )
+    );
+  };
 
-  }
-
-  const updateStatus = (id,completed)=>{
-      Settododata(prev =>
-         prev.map(item=> 
-            item.id === id ? {...item, completed:!completed}:item)
-        )
-
-  }
+  const renderTodoItem = ({ item }) => (
+    <Pressable
+      style={styles.todoItem}
+      onPress={() => updateStatus(item.id, item.completed)}
+    >
+      <View style={styles.todoContent}>
+        <TouchableOpacity
+          style={[styles.checkbox, item.completed && styles.checkboxChecked]}
+          onPress={() => updateStatus(item.id, item.completed)}
+        >
+          {item.completed && <Feather name="check" size={16} color="white" />}
+        </TouchableOpacity>
+        <Text style={[
+          styles.todoText,
+          item.completed && styles.todoTextCompleted
+        ]}>
+          {item.title}
+        </Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => deleteOperation(item.id)}
+        style={styles.deleteButton}
+      >
+        <Feather name="trash-2" size={20} color="#FF5A5A" />
+      </TouchableOpacity>
+    </Pressable>
+  );
 
   return (
     <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-  >
-  <SafeAreaView style={styles.container}>
-    <StatusBar
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
           animated={true}
-          backgroundColor="#61dafb"
-          hidden={false}
+          backgroundColor="#F8F9FA"
+          barStyle="dark-content"
         />
-    <View style={{flex:1}} >
-      <View >
-        <TextInput
-          style={styles.input}
-          onChangeText={(text)=>{Settext(text)}}
-          value={text}
-          placeholder='Add todo here...'
+        <View style={styles.header}>
+          <Text style={styles.title}>My Tasks</Text>
+          <Text style={styles.subtitle}>
+            {todoData.filter(t => !t.completed).length} tasks remaining
+          </Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            onChangeText={setText}
+            value={text}
+            placeholder="Add a new task..."
+            placeholderTextColor="#A0AEC0"
           />
-        <Pressable style={({ pressed }) => [
-                     styles.button,
-                     { 
-                       backgroundColor: pressed ? 'rgba(0,0,0,0.5)' : 'rgb(236, 46, 46)',
-                       transform: [{ scale: pressed ? 0.97 : 1 }],
-                      }
-                      ]} 
-                    onPress={() => {
-                      console.log(text)
-                      createOperation(text)
-                      Keyboard.dismiss()
-                    }}>
-          <Text style={styles.buttonText}>Add</Text>
-        </Pressable>
-      </View>
-      
-      <FlatList
-        data={tododata}
-        renderItem={({item})=>(
-          <View style={styles.aligntodos}>
-            <TouchableOpacity 
-            hitSlop={20}
-            onLongPress={(pressed)=>updateStatus(item.id,item.completed)}
-            >
-             <Text style={ !item.completed ? styles.todotext : styles.todotextwithstrike}  >{item.title}</Text>
-            </TouchableOpacity>
-          
-            <Pressable onPress={()=>{
-                                alert('delete pressed')
-                                deleteOperation(item.id)
-                                }}>
-              <MaterialIcons name="delete" color="#ff0000" size={20} />
-            </Pressable>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              createOperation(text);
+              Keyboard.dismiss();
+            }}
+          >
+            <Feather name="plus" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
 
-          </View>
-        )}
-        keyExtractor={item=>item.id.toString()}
-        ItemSeparatorComponent={()=><View style={{height:20}}/>}
-        contentContainerStyle={{ padding: 10 }}
-        scrollEnabled={true}
+        <FlatList
+          data={todoData}
+          renderItem={renderTodoItem}
+          keyExtractor={item => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
         />
-
-    </View>
-    
-  </SafeAreaView>
-  </KeyboardAvoidingView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
   },
-  aligntodos:{
-    flexDirection:'row',
-    justifyContent:'space-between',
-    padding:20,
-    borderColor: 'rgba(0,0,0,0.5)',
-    borderWidth: 1,         
-    borderRadius:10,
-    
-  },
-  todotext:{
-    letterSpacing:1.5,
-    fontSize:16,
-    color:'rgba(236, 46, 46,0.7)'
-
-  },
-  todotextwithstrike:{
-    letterSpacing:1.5,
-    fontSize:16,
-    color:'green',
-    textDecorationLine:'line-through',
-    textDecorationColor: 'green',
-    textDecorationStyle:'solid'
-  },
-  button: {
-    margin: 12,
-    backgroundColor: 'rgb(236, 46, 46)',
-    paddingVertical: 10,
+  safeArea: {
+    flex: 1,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
   },
-  buttonText: {
-    color: 'white',
+  header: {
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  title: {
+    fontSize: 32,
     fontWeight: 'bold',
+    color: '#1A202C',
+    marginBottom: 8,
+  },
+  subtitle: {
     fontSize: 16,
-    letterSpacing:1.5
+    color: '#718096',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    gap: 12,
   },
   input: {
-    height: 40,
-    margin: 12,
-    borderWidth: 1,
-    padding: 10,
-    letterSpacing:1.5,
-    
-    
+    flex: 1,
+    height: 50,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#1A202C',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
-})
+  addButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#4C1D95',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#4C1D95',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  listContainer: {
+    paddingBottom: 20,
+  },
+  todoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  todoContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#CBD5E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4C1D95',
+    borderColor: '#4C1D95',
+  },
+  todoText: {
+    fontSize: 16,
+    color: '#2D3748',
+    flex: 1,
+  },
+  todoTextCompleted: {
+    color: '#A0AEC0',
+    textDecorationLine: 'line-through',
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 12,
+  },
+});
